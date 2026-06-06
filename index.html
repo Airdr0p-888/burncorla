@@ -576,7 +576,8 @@ const ERC20_ABI = [
 let provider, signer, userAddr;
 let divContract, tokenContract;
 let decimals = 18;
-let myBal    = 0n;
+let myBal       = 0n;
+let myAllowance = 0n;
 
 /* ── URL 邀请码 ──────────────────────────────────────────────────── */
 function getRefAddr() {
@@ -648,6 +649,7 @@ async function refreshData() {
         tokenContract.allowance(userAddr, DIVIDEND_CONTRACT),
       ]);
       myBal = bal;
+      myAllowance = allowance;
       document.getElementById("myTokenBal").textContent = fmt(bal) + " KOALA";
       const approved = allowance > 0n && allowance >= bal;
       const dot = document.getElementById("approveDot");
@@ -836,6 +838,7 @@ async function doBurn() {
   if (amount === 0n) { showToast("请输入燃烧数量", "error"); return; }
   if (amount < min)  { showToast("最少燃烧 5,000 KOALA", "error"); return; }
   if (amount > myBal)  { showToast("余额不足", "error"); return; }
+  if (myAllowance < amount) { showToast("代币未授权，请先授权后再燃烧", "error"); return; }
   const inviter = getRefAddr();
   const btn = document.getElementById("burnBtn");
   try {
