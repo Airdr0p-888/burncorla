@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>燃烧考拉 🐨🔥 — BNB 分红矿池</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.10.0/dist/ethers.umd.min.js"></script>
+  <style>
+    /*──────────────── 重置 & 变量 ────────────────*/
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{
+      --bg:#060b14;
+      --card:#0e1726;
+      --card2:#14203a;
+      --border:rgba(255,160,50,.18);
+      --accent:#ff8c1a;
+      --accent2:#ffcc44;
+      --blue:#38bdf8;
+      --green:#22c55e;
+      --red:#ef4444;
+      --txt:#f0e6d3;
+      --muted:#8a9bbf;
+      --glow:rgba(255,140,26,.5);
+      --glow2:rgba(255,204,68,.4);
+    }
+    html{scroll-behavior:smooth;}
+    body{
+      background:var(--bg);
+      color:var(--txt);
+      font-family:'Segoe UI','SF Pro Display',system-ui,sans-serif;
+      min-height:100vh;overflow-x:hidden;
+    }
+
+    /*──────────────── 背景粒子 ────────────────*/
+    #bg-canvas{
+      position:fixed;inset:0;pointer-events:none;z-index:0;
+      background:
+        radial-gradient(ellipse at 15% 25%,rgba(255,140,26,.12) 0%,transparent 55%),
+        radial-gradient(ellipse at 85% 75%,rgba(255,204,68,.08) 0%,transparent 55%),
+        radial-gradient(ellipse at 50% 5%, rgba(56,189,248,.07) 0%,transparent 45%);
+    }
+
+    /*──────────────── 顶栏 ────────────────*/
+    header{
+      position:sticky;top:0;z-index:200;
+      display:flex;align-items:center;justify-content:space-between;
+      padding:14px 28px;
+      background:rgba(6,11,20,.85);
+      backdrop-filter:blur(18px);
+      border-bottom:1px solid var(--border);
+    }
+    .logo{display:flex;align-items:center;gap:10px;font-size:1.15rem;font-weight:800;letter-spacing:-.4px;}
+    .logo-emoji{font-size:1.7rem;line-height:1;filter:drop-shadow(0 0 8px rgba(255,140,26,.7));}
+    .logo-text em{color:var(--accent2);font-style:normal;}
+
+    .header-right{display:flex;align-items:center;gap:10px;}
+    #networkBadge{
+      font-size:.72rem;padding:4px 10px;border-radius:50px;
+      background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);
+      color:var(--green);display:none;
+    }
+    #walletBadge{
+      font-size:.78rem;padding:6px 14px;border-radius:50px;
+      background:rgba(255,140,26,.1);border:1px solid rgba(255,140,26,.3);
+      color:var(--accent);display:none;font-family:monospace;
+    }
+    #connectBtn{
+      padding:9px 22px;border:none;border-radius:50px;
+      background:linear-gradient(135deg,var(--accent),var(--accent2));
+      color:#000;font-size:.85rem;font-weight:700;cursor:pointer;
+      box-shadow:0 0 20px var(--glow);
+      transition:opacity .2s,box-shadow .2s;
+    }
+    #connectBtn:hover{opacity:.88;box-shadow:0 0 30px var(--glow);}
+
+    /*──────────────── 布局 ────────────────*/
+    .wrapper{
+      position:relative;z-index:1;
+      max-width:880px;margin:0 auto;
+      padding:20px 16px 60px;
+    }
+
+    /*──────────────── Hero ────────────────*/
+    .hero{text-align:center;padding:48px 12px 36px;}
+    .hero-koala-img{
+      width:140px;height:140px;border-radius:50%;
+      object-fit:cover;display:block;margin:0 auto;
+      border:3px solid rgba(255,140,26,.5);
+      box-shadow:0 0 30px rgba(255,140,26,.6), 0 0 60px rgba(255,204,68,.25);
+      animation:float 3.5s ease-in-out infinite;
+    }
+    .logo-avatar{
+      width:36px;height:36px;border-radius:50%;object-fit:cover;
+      border:1.5px solid rgba(255,140,26,.5);
+      box-shadow:0 0 10px rgba(255,140,26,.5);
+    }
+    @keyframes float{
+      0%,100%{transform:translateY(0);}
+      50%{transform:translateY(-10px);}
+    }
+    .hero h1{
+      font-size:clamp(1.8rem,5vw,3rem);
+      font-weight:900;letter-spacing:-1px;line-height:1.15;
+      margin-top:16px;
+      background:linear-gradient(135deg,#fff 20%,var(--accent2) 60%,var(--accent) 100%);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+    }
+    .hero p{
+      margin-top:12px;color:var(--muted);font-size:.97rem;line-height:1.75;
+      max-width:480px;margin-inline:auto;
+    }
+
+    /*──────────────── 统计行 ────────────────*/
+    .stats-row{
+      display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+      gap:12px;margin-bottom:24px;
+    }
+    .stat-card{
+      background:var(--card);border:1px solid var(--border);
+      border-radius:16px;padding:18px 20px;
+      position:relative;overflow:hidden;
+      transition:transform .2s,box-shadow .2s;
+    }
+    .stat-card:hover{transform:translateY(-3px);box-shadow:0 8px 28px rgba(0,0,0,.45);}
+    .stat-card::before{
+      content:'';position:absolute;top:0;left:0;right:0;height:3px;
+      background:linear-gradient(90deg,var(--accent),var(--accent2));
+    }
+    .stat-label{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;}
+    .stat-value{font-size:1.45rem;font-weight:700;margin-top:6px;}
+    .sv-bnb{color:var(--accent2);}
+    .sv-token{color:var(--accent);}
+    .sv-green{color:var(--green);}
+
+    /*──────────────── 卡片 ────────────────*/
+    .card{
+      background:var(--card);border:1px solid var(--border);
+      border-radius:20px;padding:26px 26px 22px;
+      margin-bottom:18px;position:relative;overflow:hidden;
+    }
+    /* 流光边框 */
+    .card.glow{border-color:transparent;background-clip:padding-box;}
+    .card.glow::after{
+      content:'';position:absolute;inset:-1px;z-index:-1;border-radius:21px;
+      background:linear-gradient(270deg,var(--accent),var(--accent2),#ff6b35,var(--accent));
+      background-size:300% 300%;animation:bflow 4s ease infinite;opacity:.55;
+    }
+    @keyframes bflow{0%{background-position:0% 50%;}50%{background-position:100% 50%;}100%{background-position:0% 50%;}}
+
+    .card-title{
+      font-size:1rem;font-weight:700;margin-bottom:20px;
+      display:flex;align-items:center;gap:8px;
+    }
+    .step-badge{
+      display:inline-flex;align-items:center;justify-content:center;
+      width:24px;height:24px;border-radius:50%;flex-shrink:0;
+      background:linear-gradient(135deg,var(--accent),var(--accent2));
+      font-size:.75rem;font-weight:800;color:#000;
+    }
+
+    /*──────────────── 表单 ────────────────*/
+    .input-wrap{position:relative;margin-bottom:14px;}
+    .input-wrap label{display:block;font-size:.78rem;color:var(--muted);margin-bottom:6px;letter-spacing:.3px;}
+    .input-wrap input{
+      width:100%;padding:13px 16px;
+      background:var(--card2);border:1px solid var(--border);
+      border-radius:12px;color:var(--txt);font-size:.95rem;outline:none;
+      transition:border-color .2s,box-shadow .2s;
+    }
+    .input-wrap input:focus{
+      border-color:var(--accent);
+      box-shadow:0 0 0 3px rgba(255,140,26,.18);
+    }
+    .input-suffix{
+      position:absolute;right:14px;bottom:13px;
+      font-size:.8rem;color:var(--muted);pointer-events:none;
+    }
+    .max-btn{
+      position:absolute;right:58px;bottom:10px;
+      background:rgba(255,140,26,.2);border:1px solid rgba(255,140,26,.4);
+      border-radius:6px;color:var(--accent);font-size:.7rem;
+      padding:3px 8px;cursor:pointer;font-weight:600;
+      transition:background .2s;
+    }
+    .max-btn:hover{background:rgba(255,140,26,.35);}
+
+    /* Percentage quick-select buttons */
+    .pct-btns{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:12px;}
+    .pct-btn{
+      padding:9px 0;border:1px solid var(--border);border-radius:10px;
+      background:var(--card2);color:var(--muted);
+      font-size:.8rem;font-weight:700;cursor:pointer;text-align:center;
+      transition:all .2s;
+    }
+    .pct-btn:hover{color:var(--accent2);border-color:var(--accent);background:rgba(255,140,26,.12);}
+    .pct-btn.active{color:var(--accent2);border-color:var(--accent);background:rgba(255,140,26,.2);box-shadow:0 0 12px rgba(255,140,26,.25);}
+    .min-warn{
+      display:none;font-size:.76rem;color:var(--red);text-align:center;
+      margin-bottom:10px;padding:8px 12px;
+      background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);
+      border-radius:8px;
+    }
+
+    /*──────────────── 按钮 ────────────────*/
+    .btn-fire{
+      width:100%;padding:15px;border:none;border-radius:12px;
+      background:linear-gradient(135deg,#ff6b1a,var(--accent2));
+      color:#000;font-size:1.05rem;font-weight:800;cursor:pointer;
+      box-shadow:0 4px 22px var(--glow);
+      transition:opacity .2s,box-shadow .2s,transform .1s;
+      position:relative;overflow:hidden;
+    }
+    .btn-fire::after{
+      content:'';position:absolute;inset:0;
+      background:linear-gradient(135deg,rgba(255,255,255,.18),transparent);
+      pointer-events:none;
+    }
+    .btn-fire:hover{opacity:.9;box-shadow:0 6px 30px var(--glow);transform:translateY(-1px);}
+    .btn-fire:active{transform:translateY(0);}
+    .btn-fire:disabled{opacity:.42;cursor:not-allowed;transform:none;}
+
+    .btn-gold{
+      width:100%;padding:14px;border:none;border-radius:12px;
+      background:linear-gradient(135deg,var(--accent2),#f59e0b);
+      color:#000;font-size:1rem;font-weight:800;cursor:pointer;
+      box-shadow:0 4px 18px var(--glow2);
+      transition:opacity .2s,box-shadow .2s;
+    }
+    .btn-gold:hover{opacity:.88;}
+    .btn-gold:disabled{opacity:.4;cursor:not-allowed;}
+
+    .btn-outline{
+      width:100%;padding:11px;border:1px solid var(--border);
+      border-radius:12px;background:transparent;
+      color:var(--muted);font-size:.9rem;font-weight:600;cursor:pointer;
+      transition:border-color .2s,color .2s;
+    }
+    .btn-outline:hover{border-color:var(--accent);color:var(--accent);}
+    .btn-outline:disabled{opacity:.38;cursor:not-allowed;}
+
+    .btn-copy{
+      padding:7px 14px;border:1px solid var(--border);
+      border-radius:8px;background:rgba(255,140,26,.1);
+      color:var(--accent);font-size:.78rem;font-weight:600;cursor:pointer;
+      transition:background .2s;white-space:nowrap;flex-shrink:0;
+    }
+    .btn-copy:hover{background:rgba(255,140,26,.25);}
+
+    /*──────────────── 信息行 ────────────────*/
+    .info-row{
+      display:flex;justify-content:space-between;align-items:center;
+      font-size:.84rem;padding:5px 0;
+    }
+    .info-row .key{color:var(--muted);}
+    .info-row .val{font-weight:600;}
+    .divider{height:1px;background:var(--border);margin:16px 0;}
+
+    /*──────────────── 邀请面板 ────────────────*/
+    .invite-box{
+      background:var(--card2);border:1px solid rgba(255,204,68,.25);
+      border-radius:12px;padding:14px 16px;
+    }
+    .invite-link-row{
+      display:flex;align-items:center;gap:8px;margin-top:10px;
+    }
+    .invite-link-input{
+      flex:1;background:rgba(0,0,0,.3);border:1px solid var(--border);
+      border-radius:8px;padding:9px 12px;color:var(--accent2);
+      font-size:.78rem;font-family:monospace;outline:none;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    }
+
+    /*──────────────── 进度条 ────────────────*/
+    .progress-wrap{margin:6px 0 2px;}
+    .progress-bar{
+      height:6px;background:rgba(255,255,255,.06);
+      border-radius:99px;overflow:hidden;
+    }
+    .progress-fill{
+      height:100%;border-radius:99px;
+      background:linear-gradient(90deg,var(--accent),var(--accent2));
+      transition:width .5s ease;
+    }
+    .progress-label{
+      display:flex;justify-content:space-between;
+      font-size:.72rem;color:var(--muted);margin-top:4px;
+    }
+
+    /*──────────────── 状态点 ────────────────*/
+    .dot{
+      display:inline-block;width:7px;height:7px;
+      border-radius:50%;margin-right:6px;
+    }
+    .dot-g{background:var(--green);box-shadow:0 0 5px var(--green);}
+    .dot-r{background:var(--red);  box-shadow:0 0 5px var(--red);}
+    .dot-y{background:var(--accent2);box-shadow:0 0 5px var(--accent2);}
+
+    /*──────────────── Toast ────────────────*/
+    #toast{
+      position:fixed;bottom:26px;right:22px;
+      background:var(--card2);border:1px solid var(--border);
+      border-radius:12px;padding:13px 18px;
+      font-size:.86rem;max-width:300px;
+      box-shadow:0 8px 30px rgba(0,0,0,.55);
+      transform:translateY(120%);opacity:0;
+      transition:transform .35s cubic-bezier(.34,1.56,.64,1),opacity .35s;
+      z-index:9999;
+    }
+    #toast.show{transform:translateY(0);opacity:1;}
+    #toast.success{border-color:var(--green);color:var(--green);}
+    #toast.error  {border-color:var(--red);  color:var(--red);}
+    #toast.info   {border-color:var(--accent);color:var(--accent2);}
+
+    /*──────────────── Spinner ────────────────*/
+    .sp{
+      display:inline-block;width:14px;height:14px;
+      border:2px solid rgba(0,0,0,.3);border-top-color:#000;
+      border-radius:50%;animation:spin .7s linear infinite;
+      vertical-align:middle;margin-right:6px;
+    }
+    @keyframes spin{to{transform:rotate(360deg);}}
+
+    /*──────────────── 响应式 ────────────────*/
+    @media(max-width:580px){
+      header{padding:12px 14px;}
+      .card{padding:18px 14px;}
+      .hero-koala{font-size:3.5rem;}
+    }
+
+    /* 分红规则可视化 */
+    .rule-chips{
+      display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;
+    }
+    .chip{
+      padding:5px 12px;border-radius:50px;font-size:.78rem;font-weight:600;
+    }
+    .chip-fire {background:rgba(255,107,26,.15);border:1px solid rgba(255,107,26,.4);color:#ff8c44;}
+    .chip-lv1  {background:rgba(34,197,94,.12); border:1px solid rgba(34,197,94,.35); color:var(--green);}
+    .chip-lv2  {background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.35);color:var(--blue);}
+  </style>
+</head>
+<body>
+<div id="bg-canvas"></div>
+
+<!-- ── 顶栏 ────────────────────────────────────────────── -->
+<header>
+  <div class="logo">
+    <img src="koala.jpg" alt="KOALA" class="logo-avatar"/>
+    <div class="logo-text">燃烧考拉 <em>Dividend</em></div>
+  </div>
+  <div class="header-right">
+    <span id="networkBadge">BSC Mainnet</span>
+    <span id="walletBadge"></span>
+    <button id="connectBtn" onclick="connectWallet()">🦊 连接钱包</button>
+  </div>
+</header>
+
+<!-- ── 主体 ────────────────────────────────────────────── -->
+<div class="wrapper">
+
+  <!-- Hero -->
+  <div class="hero">
+    <img src="koala.jpg" alt="燃烧考拉" class="hero-koala-img"/>
+    <h1>燃烧考拉<br/>赢取 BNB 分红</h1>
+    <p>燃烧代币，按份额自动享受 BNB 分红收益<br/>邀请好友燃烧，双层返佣实时到账</p>
+    <!-- 燃烧规则 -->
+    <div style="margin-top:18px;display:flex;justify-content:center;">
+      <div style="background:rgba(255,140,26,.06);border:1px solid rgba(255,140,26,.2);border-radius:14px;padding:14px 20px;text-align:left;max-width:380px;">
+        <div style="font-size:.8rem;color:var(--muted);margin-bottom:8px;letter-spacing:.5px;">🔥 燃烧分配规则</div>
+        <div class="rule-chips">
+          <span class="chip chip-fire">92% 存入矿池</span>
+          <span class="chip chip-lv1">一级邀请 8%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+    <div class="stats-row" id="statsRow" style="display:none;">
+    <div class="stat-card">
+      <div class="stat-label">我的存入量</div>
+      <div class="stat-value sv-token" id="myDeposited">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">可领取 BNB</div>
+      <div class="stat-value sv-bnb" id="myClaimable">0.000000</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">邀请奖励累计</div>
+      <div class="stat-value sv-green" id="myInviteEarned">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">直接邀请人数</div>
+      <div class="stat-value sv-bnb" id="myInviteCount">0</div>
+    </div>
+  </div>
+
+  <!-- 全局信息 -->
+  <div class="card" id="globalCard" style="display:none;">
+    <div class="card-title">📊 矿池概览</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 12px;flex-wrap:wrap;">
+      <div class="info-row" style="flex-direction:column;align-items:flex-start;gap:2px;">
+        <span class="key">总存入量</span>
+        <span class="val sv-token" id="totalDeposited" style="font-size:1rem;">—</span>
+      </div>
+      <div class="info-row" style="flex-direction:column;align-items:flex-start;gap:2px;">
+        <span class="key">合约 BNB</span>
+        <span class="val sv-bnb" id="contractBNB" style="font-size:1rem;">—</span>
+      </div>
+      <div class="info-row" style="flex-direction:column;align-items:flex-start;gap:2px;">
+        <span class="key">累计分红</span>
+        <span class="val sv-green" id="totalDistributed" style="font-size:1rem;">—</span>
+      </div>
+    </div>
+    <!-- 我的份额占比进度条 -->
+    <div class="progress-wrap" id="shareWrap" style="display:none;margin-top:14px;">
+      <div class="progress-bar"><div class="progress-fill" id="shareFill" style="width:0%"></div></div>
+      <div class="progress-label">
+        <span>我的矿池占比</span>
+        <span id="sharePct">0%</span>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <button class="btn-outline" onclick="refreshData()" style="font-size:.8rem;padding:8px;">🔄 刷新数据</button>
+  </div>
+
+  <!-- ── 燃烧操作 ── -->
+  <div class="card glow" id="burnCard" style="display:none;">
+    <div class="card-title">
+      <span class="step-badge">1</span>
+      燃烧代币 → 加入矿池
+    </div>
+
+    <div class="info-row" style="margin-bottom:10px;">
+      <span class="key">钱包余额</span>
+      <span class="val" id="myTokenBal" style="color:var(--accent);">—</span>
+    </div>
+    <div class="info-row" style="margin-bottom:14px;">
+      <span class="key"><span class="dot dot-y" id="approveDot"></span>Approve 状态</span>
+      <span class="val" id="approveStatus" style="font-size:.82rem;">未检测</span>
+    </div>
+
+    <div class="input-wrap">
+      <label>燃烧数量</label>
+      <input id="burnAmount" type="number" min="0" placeholder="0.00"/>
+      <button class="max-btn" onclick="setMax()">MAX</button>
+      <span class="input-suffix">KOALA</span>
+    </div>
+
+    <!-- 百分比快捷选择 -->
+    <div class="pct-btns" id="pctBtns">
+      <button class="pct-btn" onclick="setPct(25)">25%</button>
+      <button class="pct-btn" onclick="setPct(50)">50%</button>
+      <button class="pct-btn" onclick="setPct(75)">75%</button>
+      <button class="pct-btn" onclick="setPct(100)">100%</button>
+    </div>
+    <div class="min-warn" id="minWarn">⚠️ 最少燃烧 5,000 KOALA</div>
+
+    <!-- 预览分配 -->
+    <div id="burnPreview" style="display:none;background:rgba(255,140,26,.06);border:1px solid rgba(255,140,26,.15);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:.8rem;">
+      <div style="color:var(--muted);margin-bottom:6px;">燃烧后分配预览：</div>
+      <div class="info-row" style="padding:2px 0;">
+        <span class="key">🔥 进入矿池 (92%)</span><span class="val sv-token" id="previewNet">0</span>
+      </div>
+      <div class="info-row" style="padding:2px 0;" id="previewLv1Row">
+        <span class="key" style="color:var(--green);">👤 一级邀请 (8%)</span><span class="val sv-green" id="previewLv1">0</span>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+      <button class="btn-outline" id="approveBtn" onclick="doApprove()">🔓 授权 Approve</button>
+      <button class="btn-fire"   id="burnBtn"    onclick="doBurn()">🔥 立即燃烧</button>
+    </div>
+  </div>
+
+  <!-- ── 领取分红 ── -->
+  <div class="card" id="claimCard" style="display:none;">
+    <div class="card-title">
+      <span class="step-badge">2</span>
+      领取 BNB 分红
+    </div>
+    <div class="info-row">
+      <span class="key">可领取数量</span>
+      <span class="val sv-bnb" id="claimableAmt" style="font-size:1.3rem;">0 BNB</span>
+    </div>
+    <div class="divider"></div>
+    <button class="btn-gold" id="claimBtn" onclick="doClaim()">⚡ 领取 BNB</button>
+  </div>
+
+  <!-- ── 邀请面板 ── -->
+  <div class="card" id="inviteCard" style="display:none;">
+    <div class="card-title">🎁 我的邀请</div>
+    <div class="invite-box">
+      <div class="info-row">
+        <span class="key">我的邀请人</span>
+        <span class="val" id="myInviter" style="font-size:.8rem;color:var(--muted);font-family:monospace;">未绑定</span>
+      </div>
+      <div class="info-row" style="margin-top:6px;">
+        <span class="key" style="color:var(--accent2);">📋 我的邀请链接</span>
+      </div>
+      <div class="invite-link-row">
+        <input class="invite-link-input" id="inviteLink" readonly value="连接钱包后生成" onclick="this.select()"/>
+        <button class="btn-copy" onclick="copyInvite()">📋 复制</button>
+      </div>
+      <div style="font-size:.74rem;color:var(--muted);margin-top:8px;line-height:1.6;">
+        好友通过你的链接燃烧，你自动获得 <span style="color:var(--green);font-weight:600;">8% 代币</span> 奖励，实时到账钱包。
+      </div>
+    </div>
+
+    <!-- 邀请统计 -->
+    <div class="divider"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;">
+        <div class="stat-label">直接邀请人数</div>
+        <div class="stat-value sv-green" id="invCount2" style="font-size:1.3rem;">0</div>
+      </div>
+      <div style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;">
+        <div class="stat-label">累计邀请奖励</div>
+        <div class="stat-value sv-token" id="invEarned2" style="font-size:1.3rem;">0 KOALA</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 提取代币（折叠） ── -->
+  <div class="card" id="withdrawCard" style="display:none;">
+    <div class="card-title">↩️ 提取已存代币（可选）</div>
+    <div class="input-wrap">
+      <label>提取数量</label>
+      <input id="withdrawAmt" type="number" min="0" placeholder="0.00"/>
+      <span class="input-suffix">KOALA</span>
+    </div>
+    <button class="btn-outline" id="withdrawBtn" onclick="doWithdraw()">↩️ 提取代币</button>
+  </div>
+
+  <!-- 底部 -->
+  <div style="text-align:center;color:var(--muted);font-size:.75rem;margin-top:32px;line-height:1.9;">
+    <p>🐨 燃烧考拉 · 非托管 · 合约开源 · 份额实时计算</p>
+    <p>BSC Chain · MetaMask / TokenPocket</p>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- ───────────────────────────────── JS ──────────────────────────────────── -->
+<script>
+/* ══════════════════════════════════════════════════════════════════
+   ★ 后台配置区 — 部署后在此填写两个地址，无需修改其他任何代码 ★
+   ════════════════════════════════════════════════════════════════ */
+const DIVIDEND_CONTRACT = "0x0000000000000000000000000000000000000000"; // ← 填分红合约
+const TOKEN_CONTRACT    = "0x0000000000000000000000000000000000000000"; // ← 填代币合约
+/* ══════════════════════════════════════════════════════════════════ */
+
+/* ── ABI ─────────────────────────────────────────────────────────── */
+const DIVIDEND_ABI = [
+  "function totalDeposited() view returns (uint256)",
+  "function depositedOf(address) view returns (uint256)",
+  "function claimableDividend(address) view returns (uint256)",
+  "function withdrawnDividends(address) view returns (uint256)",
+  "function contractBNBBalance() view returns (uint256)",
+  "function totalDividendsDistributed() view returns (uint256)",
+  "function tokenDecimals() view returns (uint8)",
+  "function getInviteInfo(address) view returns (address,uint256,uint256)",
+  "function deposit(uint256 amount, address inviter)",
+  "function claimDividend()",
+  "function withdrawDeposit(uint256 amount)",
+];
+const ERC20_ABI = [
+  "function decimals() view returns (uint8)",
+  "function balanceOf(address) view returns (uint256)",
+  "function allowance(address,address) view returns (uint256)",
+  "function approve(address,uint256) returns (bool)",
+];
+
+/* ── 全局状态 ─────────────────────────────────────────────────────── */
+let provider, signer, userAddr;
+let divContract, tokenContract;
+let decimals = 18;
+let myBal    = 0n;
+
+/* ── URL 邀请码 ──────────────────────────────────────────────────── */
+function getRefAddr() {
+  const p = new URLSearchParams(window.location.search);
+  const r = p.get("ref") || "";
+  return ethers.isAddress(r) ? r : "0x0000000000000000000000000000000000000000";
+}
+
+/* ── 连接钱包 ────────────────────────────────────────────────────── */
+async function connectWallet() {
+  if (!window.ethereum) { showToast("请安装 MetaMask 钱包", "error"); return; }
+  try {
+    showToast("正在连接钱包…", "info");
+    provider = new ethers.BrowserProvider(window.ethereum);
+    await provider.send("eth_requestAccounts", []);
+    signer   = await provider.getSigner();
+    userAddr = await signer.getAddress();
+
+    const net = await provider.getNetwork();
+    const chainId = Number(net.chainId);
+
+    const netBadge = document.getElementById("networkBadge");
+    netBadge.style.display = "inline";
+    if (chainId === 56)      netBadge.textContent = "🟢 BSC Mainnet";
+    else if (chainId === 97) netBadge.textContent = "🟡 BSC Testnet";
+    else                     netBadge.textContent = `Chain ${chainId}`;
+
+    document.getElementById("walletBadge").textContent = userAddr.slice(0,6)+"…"+userAddr.slice(-4);
+    document.getElementById("walletBadge").style.display = "inline";
+    document.getElementById("connectBtn").style.display = "none";
+
+    // 初始化合约
+    divContract   = new ethers.Contract(DIVIDEND_CONTRACT, DIVIDEND_ABI, signer);
+    tokenContract = new ethers.Contract(TOKEN_CONTRACT,    ERC20_ABI,    signer);
+    decimals = Number(await tokenContract.decimals());
+
+    // 显示面板
+    ["statsRow","globalCard","burnCard","claimCard","inviteCard","withdrawCard"]
+      .forEach(id => document.getElementById(id).style.display =
+        id === "statsRow" ? "grid" : "block");
+
+    // 生成邀请链接
+    const base = location.href.split("?")[0];
+    document.getElementById("inviteLink").value = `${base}?ref=${userAddr}`;
+
+    await refreshData();
+    showToast("钱包连接成功 ✓", "success");
+  } catch (e) {
+    showToast("连接失败: " + (e.message || e), "error");
+  }
+}
+
+/* ── 刷新数据 ────────────────────────────────────────────────────── */
+async function refreshData() {
+  if (!divContract || !userAddr) return;
+  try {
+    const [
+      totalDep, contractBNB, totalDist,
+      myDep, myClaimable, myWithdrawn,
+      myBalance, myAllowance,
+      invInfo,
+    ] = await Promise.all([
+      divContract.totalDeposited(),
+      divContract.contractBNBBalance(),
+      divContract.totalDividendsDistributed(),
+      divContract.depositedOf(userAddr),
+      divContract.claimableDividend(userAddr),
+      divContract.withdrawnDividends(userAddr),
+      tokenContract.balanceOf(userAddr),
+      tokenContract.allowance(userAddr, DIVIDEND_CONTRACT),
+      divContract.getInviteInfo(userAddr),
+    ]);
+
+    myBal = myBalance;
+
+    const fmt  = v => fmtToken(v);
+    const fmtB = v => (+ethers.formatEther(v)).toFixed(6);
+
+    // 全局
+    document.getElementById("totalDeposited").textContent    = fmt(totalDep) + " KOALA";
+    document.getElementById("contractBNB").textContent       = fmtB(contractBNB) + " BNB";
+    document.getElementById("totalDistributed").textContent  = fmtB(totalDist) + " BNB";
+
+    // 我的
+    document.getElementById("myDeposited").textContent       = fmt(myDep);
+    document.getElementById("myClaimable").textContent       = fmtB(myClaimable);
+    document.getElementById("claimableAmt").textContent      = fmtB(myClaimable) + " BNB";
+    document.getElementById("myTokenBal").textContent        = fmt(myBalance) + " KOALA";
+
+    // 邀请
+    const [inv1, invCnt, invEarned] = invInfo;
+    document.getElementById("myInviteCount").textContent  = invCnt.toString();
+    document.getElementById("invCount2").textContent      = invCnt.toString();
+    document.getElementById("myInviteEarned").textContent = fmt(invEarned);
+    document.getElementById("invEarned2").textContent     = fmt(invEarned) + " KOALA";
+    document.getElementById("myInviter").textContent      =
+      inv1 && inv1 !== ethers.ZeroAddress
+        ? inv1.slice(0,8)+"…"+inv1.slice(-6)
+        : "无邀请人";
+
+    // 份额占比
+    if (totalDep > 0n) {
+      const pct = Number((myDep * 10000n) / totalDep) / 100;
+      document.getElementById("shareWrap").style.display = "block";
+      document.getElementById("shareFill").style.width   = Math.min(pct, 100) + "%";
+      document.getElementById("sharePct").textContent    = pct.toFixed(2) + "%";
+    }
+
+    // Approve 状态
+    const burnAmt = parseBurnInput();
+    const dot = document.getElementById("approveDot");
+    const sta = document.getElementById("approveStatus");
+    if (myAllowance === 0n) {
+      dot.className = "dot dot-r"; sta.textContent = "未授权";
+    } else if (burnAmt > 0n && myAllowance >= burnAmt) {
+      dot.className = "dot dot-g"; sta.textContent = "已授权 ✓";
+    } else {
+      dot.className = "dot dot-y"; sta.textContent = myAllowance > 0n ? "部分授权" : "未授权";
+    }
+  } catch(e){ console.error(e); }
+}
+
+/* ── 燃烧预览 + 最低检查 ────────────────────────────────────────── */
+const MIN_BURN = 5000n; // 最低燃烧 5000 代币
+
+function parseBurnInput() {
+  const v = document.getElementById("burnAmount").value.trim();
+  if (!v || isNaN(v) || Number(v) <= 0) return 0n;
+  try { return ethers.parseUnits(v, decimals); } catch { return 0n; }
+}
+
+function getMinBurnUnits() {
+  try { return ethers.parseUnits("5000", decimals); } catch { return 5000n * (10n ** BigInt(decimals)); }
+}
+
+function setMax() {
+  if (!myBal || myBal === 0n) return;
+  const val = ethers.formatUnits(myBal, decimals);
+  document.getElementById("burnAmount").value = val;
+  updatePreview();
+}
+
+function setPct(pct) {
+  if (!myBal || myBal === 0n) { showToast("钱包余额为空", "error"); return; }
+  const amt = (myBal * BigInt(pct)) / 100n;
+  document.getElementById("burnAmount").value = ethers.formatUnits(amt, decimals);
+  updatePreview();
+
+  // 高亮激活按钮
+  document.querySelectorAll(".pct-btn").forEach(b => b.classList.remove("active"));
+  const btns = document.querySelectorAll(".pct-btn");
+  if (pct === 25) btns[0].classList.add("active");
+  else if (pct === 50) btns[1].classList.add("active");
+  else if (pct === 75) btns[2].classList.add("active");
+  else if (pct === 100) btns[3].classList.add("active");
+}
+
+function checkMinBurn(amount) {
+  const min = getMinBurnUnits();
+  const warn = document.getElementById("minWarn");
+  const btn  = document.getElementById("burnBtn");
+  if (amount > 0n && amount < min) {
+    warn.style.display = "block";
+    btn.disabled = true;
+    btn.style.opacity = ".42";
+    return false;
+  }
+  warn.style.display = "none";
+  btn.disabled = false;
+  btn.style.opacity = "";
+  return true;
+}
+
+function updatePreview() {
+  const amount = parseBurnInput();
+  const preview = document.getElementById("burnPreview");
+
+  // 最低检查
+  checkMinBurn(amount);
+
+  if (amount === 0n) { preview.style.display = "none"; return; }
+  try {
+    const lv1  = (amount * 800n) / 10000n;
+    const net  = amount - lv1;
+    preview.style.display = "block";
+    document.getElementById("previewNet").textContent = fmtToken(net) + " KOALA";
+    document.getElementById("previewLv1").textContent = fmtToken(lv1) + " KOALA";
+  } catch { preview.style.display = "none"; }
+}
+
+/* ── 授权 ────────────────────────────────────────────────────────── */
+async function doApprove() {
+  if (!signer) { showToast("请先连接钱包", "error"); return; }
+  const btn = document.getElementById("approveBtn");
+  try {
+    btn.innerHTML = '<span class="sp"></span>授权中…'; btn.disabled = true;
+    const tx = await tokenContract.approve(DIVIDEND_CONTRACT, ethers.MaxUint256);
+    showToast("授权交易已提交…", "info");
+    await tx.wait();
+    showToast("授权成功 ✓", "success");
+    await refreshData();
+  } catch(e) {
+    showToast("授权失败: " + (e.reason || e.message || e), "error");
+  } finally { btn.innerHTML = "🔓 授权 Approve"; btn.disabled = false; }
+}
+
+/* ── 燃烧 ────────────────────────────────────────────────────────── */
+async function doBurn() {
+  if (!signer) { showToast("请先连接钱包", "error"); return; }
+  const amount = parseBurnInput();
+  const min = getMinBurnUnits();
+  if (amount === 0n) { showToast("请输入燃烧数量", "error"); return; }
+  if (amount < min)  { showToast("最少燃烧 5,000 KOALA", "error"); return; }
+  if (amount > myBal)  { showToast("余额不足", "error"); return; }
+  const inviter = getRefAddr();
+  const btn = document.getElementById("burnBtn");
+  try {
+    btn.innerHTML = '<span class="sp"></span>燃烧中…'; btn.disabled = true;
+    const tx = await divContract.deposit(amount, inviter);
+    showToast("🔥 交易已提交，等待确认…", "info");
+    await tx.wait();
+    showToast("🐨🔥 燃烧成功！代币已进入矿池", "success");
+    document.getElementById("burnAmount").value = "";
+    document.getElementById("burnPreview").style.display = "none";
+    await refreshData();
+  } catch(e) {
+    showToast("燃烧失败: " + (e.reason || e.message || e), "error");
+  } finally { btn.innerHTML = "🔥 立即燃烧"; btn.disabled = false; }
+}
+
+/* ── 领取 ────────────────────────────────────────────────────────── */
+async function doClaim() {
+  if (!signer) { showToast("请先连接钱包", "error"); return; }
+  const btn = document.getElementById("claimBtn");
+  try {
+    btn.innerHTML = '<span class="sp"></span>领取中…'; btn.disabled = true;
+    const tx = await divContract.claimDividend();
+    showToast("交易已提交…", "info");
+    await tx.wait();
+    showToast("⚡ BNB 领取成功！", "success");
+    await refreshData();
+  } catch(e) {
+    showToast("领取失败: " + (e.reason || e.message || e), "error");
+  } finally { btn.innerHTML = "⚡ 领取 BNB"; btn.disabled = false; }
+}
+
+/* ── 提取代币 ────────────────────────────────────────────────────── */
+async function doWithdraw() {
+  if (!signer) { showToast("请先连接钱包", "error"); return; }
+  const v = document.getElementById("withdrawAmt").value.trim();
+  if (!v || isNaN(v) || Number(v) <= 0) { showToast("请输入提取数量", "error"); return; }
+  const btn = document.getElementById("withdrawBtn");
+  try {
+    btn.innerHTML = '<span class="sp"></span>提取中…'; btn.disabled = true;
+    const tx = await divContract.withdrawDeposit(ethers.parseUnits(v, decimals));
+    showToast("提取交易已提交…", "info");
+    await tx.wait();
+    showToast("↩️ 代币提取成功", "success");
+    document.getElementById("withdrawAmt").value = "";
+    await refreshData();
+  } catch(e) {
+    showToast("提取失败: " + (e.reason || e.message || e), "error");
+  } finally { btn.innerHTML = "↩️ 提取代币"; btn.disabled = false; }
+}
+
+/* ── 工具函数 ────────────────────────────────────────────────────── */
+function fmtToken(v) {
+  return (+ethers.formatUnits(v, decimals)).toLocaleString("zh-CN",{maximumFractionDigits:4});
+}
+function copyInvite() {
+  const v = document.getElementById("inviteLink").value;
+  navigator.clipboard.writeText(v).then(() => showToast("邀请链接已复制 ✓", "success"));
+}
+
+let _toastTimer;
+function showToast(msg, type = "info") {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.className = "show " + type;
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { el.className = ""; }, 3800);
+}
+
+/* ── 事件绑定 ────────────────────────────────────────────────────── */
+window.addEventListener("load", () => {
+  document.getElementById("burnAmount")?.addEventListener("input", updatePreview);
+  if (window.ethereum?.selectedAddress) connectWallet();
+});
+window.ethereum?.on("accountsChanged", () => location.reload());
+window.ethereum?.on("chainChanged",    () => location.reload());
+</script>
+</body>
+</html>
