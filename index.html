@@ -638,7 +638,7 @@ async function refreshData() {
       ]);
       myBal = bal;
       myAllowance = allowance;
-      document.getElementById("myTokenBal").textContent = fmt(bal) + " Corla";
+      document.getElementById("myTokenBal").textContent = fmt(bal) + " 燃烧Corla";
       const approved = allowance > 0n && allowance >= bal;
       const dot = document.getElementById("approveDot");
       const sta = document.getElementById("approveStatus");
@@ -695,7 +695,7 @@ async function refreshData() {
     ]);
 
     // 全局
-    document.getElementById("totalDeposited").textContent    = fmt(totalDep) + " Corla";
+    document.getElementById("totalDeposited").textContent    = fmt(totalDep) + " 燃烧Corla";
     document.getElementById("contractBNB").textContent       = fmtB(contractBNB) + " BNB";
     document.getElementById("totalDistributed").textContent  = fmtB(totalDist) + " BNB";
 
@@ -709,7 +709,7 @@ async function refreshData() {
     document.getElementById("myInviteCount").textContent  = invCnt.toString();
     document.getElementById("invCount2").textContent      = invCnt.toString();
     document.getElementById("myInviteEarned").textContent = fmt(invEarned);
-    document.getElementById("invEarned2").textContent     = fmt(invEarned) + " Corla";
+    document.getElementById("invEarned2").textContent     = fmt(invEarned) + " 燃烧Corla";
     document.getElementById("myInviter").textContent      =
       inv1 && inv1 !== ethers.ZeroAddress
         ? inv1.slice(0,8)+"…"+inv1.slice(-6)
