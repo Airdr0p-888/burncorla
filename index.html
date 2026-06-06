@@ -432,6 +432,7 @@
     <div class="card-title">
       <span class="step-badge">1</span>
       燃烧代币 → 加入矿池
+      <span id="contractWarn" style="display:none;font-size:.7rem;color:var(--red);margin-top:4px;">⚠️ 分红合约未部署，燃烧功能不可用</span>
     </div>
 
     <div class="info-row" style="margin-bottom:10px;">
@@ -617,7 +618,10 @@ async function connectWallet() {
     // 初始化合约
     divContract   = new ethers.Contract(DIVIDEND_CONTRACT, DIVIDEND_ABI, signer);
     tokenContract = new ethers.Contract(TOKEN_CONTRACT,    ERC20_ABI,    signer);
-    decimals = Number(await tokenContract.decimals());
+
+    // decimals 容错：非标准代币回退到 18
+    try { decimals = Number(await tokenContract.decimals()); }
+    catch { decimals = 18; }
 
     // 显示面板
     ["statsRow","globalCard","burnCard","claimCard","inviteCard","withdrawCard"]
@@ -636,13 +640,65 @@ async function connectWallet() {
 }
 
 /* ── 刷新数据 ────────────────────────────────────────────────────── */
+const IS_ZERO_ADDR = DIVIDEND_CONTRACT === "0x0000000000000000000000000000000000000000";
+
 async function refreshData() {
-  if (!divContract || !userAddr) return;
+  if (!userAddr) return;
+  const fmt  = v => fmtToken(v);
+  const fmtB = v => (+ethers.formatEther(v)).toFixed(6);
+
+  // ── 代币余额 & 授权（独立于分红合约，永远能查到）──
+  if (tokenContract) {
+    try {
+      const [bal, allowance] = await Promise.all([
+        tokenContract.balanceOf(userAddr),
+        tokenContract.allowance(userAddr, DIVIDEND_CONTRACT),
+      ]);
+      myBal = bal;
+      document.getElementById("myTokenBal").textContent = fmt(bal) + " KOALA";
+      const approved = allowance > 0n && allowance >= bal;
+      const dot = document.getElementById("approveDot");
+      const sta = document.getElementById("approveStatus");
+      dot.className = approved ? "dot dot-g" : allowance > 0n ? "dot dot-y" : "dot dot-r";
+      sta.textContent = approved ? "已授权 ✓" : allowance > 0n ? "授权不足" : "未授权";
+      document.getElementById("burnCard").style.opacity = "1";
+    } catch (e) {
+      console.warn("token balance fetch failed:", e.message || e);
+      document.getElementById("myTokenBal").textContent = "—";
+      const dot = document.getElementById("approveDot");
+      const sta = document.getElementById("approveStatus");
+      dot.className = "dot dot-r";
+      sta.textContent = "检测失败";
+    }
+  }
+
+  // ── 分红合约数据（合约未部署时跳过）──
+  if (IS_ZERO_ADDR || !divContract) {
+    document.getElementById("totalDeposited").textContent = "合约未部署";
+    document.getElementById("contractBNB").textContent = "—";
+    document.getElementById("totalDistributed").textContent = "—";
+    document.getElementById("myDeposited").textContent = "—";
+    document.getElementById("myClaimable").textContent = "—";
+    document.getElementById("claimableAmt").textContent = "— BNB";
+    document.getElementById("myInviteCount").textContent = "—";
+    document.getElementById("myInviteEarned").textContent = "—";
+    document.getElementById("myInviter").textContent = "—";
+    document.getElementById("globalCard").style.opacity = ".5";
+    document.getElementById("claimCard").style.opacity = ".5";
+    document.getElementById("inviteCard").style.opacity = ".5";
+    document.getElementById("contractWarn").style.display = "block";
+    return;
+  }
+  // 合约已部署，隐藏警告
+  document.getElementById("contractWarn").style.display = "none";
+  document.getElementById("globalCard").style.opacity = "";
+  document.getElementById("claimCard").style.opacity = "";
+  document.getElementById("inviteCard").style.opacity = "";
+
   try {
     const [
       totalDep, contractBNB, totalDist, gasRes,
       myDep, myClaimable, myWithdrawn,
-      myBalance, myAllowance,
       invInfo,
     ] = await Promise.all([
       divContract.totalDeposited(),
@@ -652,15 +708,8 @@ async function refreshData() {
       divContract.depositedOf(userAddr),
       divContract.claimableDividend(userAddr),
       divContract.withdrawnDividends(userAddr),
-      tokenContract.balanceOf(userAddr),
-      tokenContract.allowance(userAddr, DIVIDEND_CONTRACT),
       divContract.getInviteInfo(userAddr),
     ]);
-
-    myBal = myBalance;
-
-    const fmt  = v => fmtToken(v);
-    const fmtB = v => (+ethers.formatEther(v)).toFixed(6);
 
     // 全局
     document.getElementById("totalDeposited").textContent    = fmt(totalDep) + " KOALA";
@@ -671,7 +720,6 @@ async function refreshData() {
     document.getElementById("myDeposited").textContent       = fmt(myDep);
     document.getElementById("myClaimable").textContent       = fmtB(myClaimable);
     document.getElementById("claimableAmt").textContent      = fmtB(myClaimable) + " BNB";
-    document.getElementById("myTokenBal").textContent        = fmt(myBalance) + " KOALA";
 
     // 邀请
     const [inv1, invCnt, invEarned] = invInfo;
@@ -692,18 +740,15 @@ async function refreshData() {
       document.getElementById("sharePct").textContent    = pct.toFixed(2) + "%";
     }
 
-    // Approve 状态
-    const burnAmt = parseBurnInput();
-    const dot = document.getElementById("approveDot");
-    const sta = document.getElementById("approveStatus");
-    if (myAllowance === 0n) {
-      dot.className = "dot dot-r"; sta.textContent = "未授权";
-    } else if (burnAmt > 0n && myAllowance >= burnAmt) {
-      dot.className = "dot dot-g"; sta.textContent = "已授权 ✓";
-    } else {
-      dot.className = "dot dot-y"; sta.textContent = myAllowance > 0n ? "部分授权" : "未授权";
-    }
-  } catch(e){ console.error(e); }
+  } catch(e) {
+    console.warn("Dividend contract data fetch failed:", e.message || e);
+    document.getElementById("totalDeposited").textContent = "加载失败";
+    document.getElementById("contractBNB").textContent = "—";
+    document.getElementById("totalDistributed").textContent = "—";
+    document.getElementById("myDeposited").textContent = "—";
+    document.getElementById("myClaimable").textContent = "—";
+    document.getElementById("claimableAmt").textContent = "— BNB";
+  }
 }
 
 /* ── 燃烧预览 + 最低检查 ────────────────────────────────────────── */
