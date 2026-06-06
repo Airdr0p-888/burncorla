@@ -371,10 +371,6 @@
           <span class="chip chip-fire">92% 存入矿池</span>
           <span class="chip chip-lv1">一级邀请 8%</span>
         </div>
-        <div style="font-size:.73rem;color:var(--muted);line-height:1.6;">
-          💰 BNB 自动分红：每次燃烧时自动发放待领 BNB<br/>
-          ⛽ 收到 BNB 时 10% 留作 gas 储备
-        </div>
       </div>
     </div>
   </div>
@@ -487,9 +483,6 @@
       <span class="key">可领取数量</span>
       <span class="val sv-bnb" id="claimableAmt" style="font-size:1.3rem;">0 BNB</span>
     </div>
-    <div style="font-size:.74rem;color:var(--green);margin:8px 0;text-align:center;">
-      💡 每次燃烧时自动发放 BNB，无需手动领取
-    </div>
     <div class="divider"></div>
     <button class="btn-gold" id="claimBtn" onclick="doClaim()">⚡ 手动领取 BNB</button>
   </div>
@@ -553,7 +546,7 @@
 /* ══════════════════════════════════════════════════════════════════
    ★ 后台配置区 — 部署后在此填写两个地址，无需修改其他任何代码 ★
    ════════════════════════════════════════════════════════════════ */
-const DIVIDEND_CONTRACT = "0x0000000000000000000000000000000000000000"; // ← 填分红合约
+const DIVIDEND_CONTRACT = "0x0F1b02932B3c47647b5cDfD1EE2b462aA73FB20c"; // ← 分红合约
 const TOKEN_CONTRACT    = "0x7d83501b3417F8e352Cd227beF434F588ef6a670"; // ← 代币合约
 /* ══════════════════════════════════════════════════════════════════ */
 
