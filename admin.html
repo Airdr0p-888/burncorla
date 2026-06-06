@@ -188,8 +188,21 @@ a.back:hover{color:var(--accent2);}
       🔥 提取全部 BNB
     </button>
 
+    <!-- KOALA 指定钱包+数量提款 -->
+    <div class="input-wrap" style="margin-bottom:10px;">
+      <label>🐨 接收钱包地址</label>
+      <input id="koalaToAddr" type="text" placeholder="0x..." style="font-family:monospace;font-size:.78rem;"/>
+    </div>
+    <div class="input-wrap" style="margin-bottom:10px;">
+      <label>提取数量</label>
+      <div style="display:flex;align-items:center;">
+        <input id="koalaAmt" type="number" min="0" placeholder="数量" oninput="updateKoalaPreview()" style="flex:1;"/>
+        <button class="btn btn-sm" onclick="setKoalaMax()" style="margin-left:8px;padding:8px 12px;font-size:.72rem;white-space:nowrap;">MAX</button>
+      </div>
+    </div>
+    <div style="font-size:.73rem;color:var(--muted);margin-bottom:10px;" id="koalaPreview" hidden></div>
     <button class="btn btn-danger" id="wdTokenBtn" onclick="withdrawToken()" style="width:100%;margin-bottom:12px;">
-      🐨 提取全部 KOALA
+      🐨 提取 KOALA
     </button>
 
     <div class="divider" style="height:1px;background:var(--border);margin:16px 0;"></div>
@@ -242,7 +255,7 @@ const DIVIDEND_ABI = [
   "function gasReserve() view returns (uint256)",
   "function contractBNBBalance() view returns (uint256)",
   "function emergencyWithdrawBNB()",
-  "function emergencyWithdrawToken()",
+  "function emergencyWithdrawTokenTo(address,uint256)",
   "function emergencyWithdrawAnyToken(address,uint256)",
 ];
 const ERC20_ABI = [
@@ -347,18 +360,48 @@ async function withdrawBNB() {
 
 async function withdrawToken() {
   if (!isOwner) { showToast("仅 Owner 可操作", "error"); return; }
+  const toAddr  = document.getElementById("koalaToAddr").value.trim();
+  const amtStr  = document.getElementById("koalaAmt").value.trim();
   const btn = document.getElementById("wdTokenBtn");
+
+  if (!ethers.isAddress(toAddr)) { showToast("请输入有效的接收钱包地址", "error"); return; }
+  if (!amtStr || isNaN(amtStr) || Number(amtStr) <= 0) { showToast("请输入提取数量", "error"); return; }
+
   try {
+    const amount = ethers.parseUnits(amtStr, decimals);
+    const balWei = await tokenContract.balanceOf(DIVIDEND_CONTRACT);
+    if (amount > balWei) { showToast("提取数量超过合约余额", "error"); return; }
+
     btn.innerHTML = '<span class="sp"></span>提取中…'; btn.disabled = true;
-    const tx = await divContract.emergencyWithdrawToken();
+    const tx = await divContract.emergencyWithdrawTokenTo(toAddr, amount);
     showToast("交易已提交…", "info");
     await tx.wait();
-    showToast("✅ KOALA 已全部提取到 Owner 钱包", "success");
+    showToast("✅ KOALA 提取成功", "success");
+    document.getElementById("koalaAmt").value = "";
     await refresh();
   } catch(e) {
     showToast("失败: " + (e.reason || e.message || e), "error");
-  } finally { btn.textContent = "🐨 提取全部 KOALA"; btn.disabled = !isOwner; }
+  } finally { btn.textContent = "🐨 提取 KOALA"; btn.disabled = !isOwner; }
 }
+
+/* KOALA 快捷填满 */
+async function setKoalaMax() {
+  try {
+    const bal = await tokenContract.balanceOf(DIVIDEND_CONTRACT);
+    const val = ethers.formatUnits(bal, decimals);
+    document.getElementById("koalaAmt").value = val;
+    updateKoalaPreview();
+  } catch {}
+}
+
+function updateKoalaPreview() {
+  const v = document.getElementById("koalaAmt").value;
+  const p = document.getElementById("koalaPreview");
+  if (!v || isNaN(v) || Number(v) <= 0) { p.hidden = true; return; }
+  p.hidden = false;
+  p.textContent = "提取数量: " + v + " KOALA";
+}
+
 
 async function withdrawAnyToken() {
   if (!isOwner) { showToast("仅 Owner 可操作", "error"); return; }

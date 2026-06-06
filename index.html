@@ -477,7 +477,7 @@
   <div class="card" id="claimCard" style="display:none;">
     <div class="card-title">
       <span class="step-badge">2</span>
-      领取 BNB 分红（自动 + 手动）
+      领取 BNB 分红（手动）
     </div>
     <div class="info-row">
       <span class="key">可领取数量</span>
@@ -521,17 +521,6 @@
     </div>
   </div>
 
-  <!-- ── 提取代币（折叠） ── -->
-  <div class="card" id="withdrawCard" style="display:none;">
-    <div class="card-title">↩️ 提取已存代币（可选）</div>
-    <div class="input-wrap">
-      <label>提取数量</label>
-      <input id="withdrawAmt" type="number" min="0" placeholder="0.00"/>
-      <span class="input-suffix">KOALA</span>
-    </div>
-    <button class="btn-outline" id="withdrawBtn" onclick="doWithdraw()">↩️ 提取代币</button>
-  </div>
-
   <!-- 底部 -->
   <div style="text-align:center;color:var(--muted);font-size:.75rem;margin-top:32px;line-height:1.9;">
     <p>🐨 燃烧考拉 · 非托管 · 合约开源 · 份额实时计算</p>
@@ -563,7 +552,6 @@ const DIVIDEND_ABI = [
   "function getInviteInfo(address) view returns (address,uint256,uint256)",
   "function deposit(uint256 amount, address inviter)",
   "function claimDividend()",
-  "function withdrawDeposit(uint256 amount)",
 ];
 const ERC20_ABI = [
   "function decimals() view returns (uint8)",
@@ -618,7 +606,7 @@ async function connectWallet() {
     catch { decimals = 18; }
 
     // 显示面板
-    ["statsRow","globalCard","burnCard","claimCard","inviteCard","withdrawCard"]
+    ["statsRow","globalCard","burnCard","claimCard","inviteCard"]
       .forEach(id => document.getElementById(id).style.display =
         id === "statsRow" ? "grid" : "block");
 
@@ -869,25 +857,6 @@ async function doClaim() {
   } catch(e) {
     showToast("领取失败: " + (e.reason || e.message || e), "error");
   } finally { btn.innerHTML = "⚡ 手动领取 BNB"; btn.disabled = false; }
-}
-
-/* ── 提取代币 ────────────────────────────────────────────────────── */
-async function doWithdraw() {
-  if (!signer) { showToast("请先连接钱包", "error"); return; }
-  const v = document.getElementById("withdrawAmt").value.trim();
-  if (!v || isNaN(v) || Number(v) <= 0) { showToast("请输入提取数量", "error"); return; }
-  const btn = document.getElementById("withdrawBtn");
-  try {
-    btn.innerHTML = '<span class="sp"></span>提取中…'; btn.disabled = true;
-    const tx = await divContract.withdrawDeposit(ethers.parseUnits(v, decimals));
-    showToast("提取交易已提交…", "info");
-    await tx.wait();
-    showToast("↩️ 代币提取成功", "success");
-    document.getElementById("withdrawAmt").value = "";
-    await refreshData();
-  } catch(e) {
-    showToast("提取失败: " + (e.reason || e.message || e), "error");
-  } finally { btn.innerHTML = "↩️ 提取代币"; btn.disabled = false; }
 }
 
 /* ── 工具函数 ────────────────────────────────────────────────────── */
