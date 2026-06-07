@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>燃烧考拉 · 管理员</title>
+<style>
+:root{
+  --bg:#0a0a0f;--card:#12121a;--card2:#181823;
+  --accent:#ff8c1a;--accent2:#ffcc44;
+  --green:#22c55e;--red:#ef4444;--blue:#3b82f6;--gold:#f59e0b;
+  --muted:#7a7a8c;--text:#e0e0e8;--border:#252533;
+  --grad:linear-gradient(135deg,var(--accent),var(--accent2));
+  --grad-bg:linear-gradient(180deg,#0f0f1a 0%,#0a0a0f 100%);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+  font-family:'Segoe UI','PingFang SC',sans-serif;
+  background:var(--grad-bg);color:var(--text);
+  min-height:100vh;overflow-x:hidden;
+}
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse at 50% 0%,rgba(255,140,26,.08),transparent 60%),
+    radial-gradient(ellipse at 80% 100%,rgba(255,204,68,.04),transparent 50%);
+}
+.stars{
+  position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(1px 1px at 10% 15%,rgba(255,255,255,.5),transparent),
+    radial-gradient(1px 1px at 25% 35%,rgba(255,255,255,.3),transparent),
+    radial-gradient(1px 1px at 40% 10%,rgba(255,255,255,.4),transparent),
+    radial-gradient(1px 1px at 55% 50%,rgba(255,255,255,.35),transparent),
+    radial-gradient(1px 1px at 70% 20%,rgba(255,255,255,.3),transparent),
+    radial-gradient(2px 2px at 85% 60%,rgba(255,204,68,.3),transparent),
+    radial-gradient(1px 1px at 15% 70%,rgba(255,255,255,.25),transparent),
+    radial-gradient(1px 1px at 60% 80%,rgba(255,255,255,.3),transparent);
+}
+
+.container{position:relative;z-index:1;max-width:640px;margin:0 auto;padding:24px 16px 40px;}
+
+/* ── 顶栏 ── */
+.nav{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 18px;background:var(--card);
+  border:1px solid var(--border);border-radius:16px;
+  margin-bottom:24px;
+}
+.nav-left{display:flex;align-items:center;gap:10px;}
+.logo-avatar{
+  width:32px;height:32px;border-radius:50%;object-fit:cover;
+  border:1.5px solid rgba(255,140,26,.5);
+  box-shadow:0 0 10px rgba(255,140,26,.5);
+}
+.logo-text{font-weight:700;font-size:.95rem;}
+.logo-text em{color:var(--muted);font-style:normal;font-weight:400;font-size:.75rem;}
+.nav-right{display:flex;align-items:center;gap:10px;}
+
+.btn{font-family:inherit;cursor:pointer;border:none;border-radius:10px;font-size:.82rem;font-weight:600;padding:8px 18px;transition:all .2s;}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text);}
+.btn-outline:hover{border-color:var(--accent);color:var(--accent2);}
+.btn-grad{
+  background:var(--grad);color:#0a0a0f;font-weight:700;
+  box-shadow:0 4px 20px rgba(255,140,26,.25);
+}
+.btn-grad:hover{box-shadow:0 6px 28px rgba(255,140,26,.4);transform:translateY(-1px);}
+.btn-grad:disabled{opacity:.42;cursor:default;transform:none;box-shadow:none;}
+.btn-danger{
+  background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:var(--red);font-weight:700;
+}
+.btn-danger:hover{background:rgba(239,68,68,.22);box-shadow:0 4px 18px rgba(239,68,68,.2);}
+
+.badge{font-size:.73rem;padding:4px 10px;border-radius:20px;font-weight:600;}
+.badge-owner{background:rgba(255,204,68,.12);color:var(--gold);}
+.badge-not{background:rgba(239,68,68,.08);color:var(--red);}
+.badge-net{background:rgba(59,130,246,.1);color:var(--blue);}
+
+/* ── 卡片 ── */
+.card{
+  background:var(--card);border:1px solid var(--border);border-radius:16px;
+  padding:20px;margin-bottom:18px;
+}
+.card.glow{border-color:rgba(255,140,26,.15);box-shadow:0 0 30px rgba(255,140,26,.06);}
+.card-title{
+  font-size:.9rem;font-weight:700;margin-bottom:16px;
+  display:flex;align-items:center;gap:8px;
+}
+.card-title .icon{font-size:1.2rem;}
+
+.info-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:10px 0;border-bottom:1px solid var(--border);
+}
+.info-row:last-child{border-bottom:none;}
+.key{color:var(--muted);font-size:.82rem;}
+.val{font-weight:700;font-size:.9rem;}
+.val-bnb{color:var(--accent2);}
+.val-token{color:var(--accent);}
+
+.sp{display:inline-block;width:14px;height:14px;border:2px solid transparent;
+  border-top:2px solid #0a0a0f;border-radius:50%;animation:spin .6s linear infinite;
+  vertical-align:middle;margin-right:6px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ── 提取输入 ── */
+.input-wrap{position:relative;margin-top:12px;}
+.input-wrap label{display:block;font-size:.78rem;color:var(--muted);margin-bottom:6px;font-weight:600;}
+.input-wrap input{
+  width:100%;padding:12px;border:1px solid var(--border);border-radius:10px;
+  background:var(--card2);color:var(--text);font-size:.9rem;font-family:inherit;
+  outline:none;transition:border .2s;
+}
+.input-wrap input:focus{border-color:var(--accent);}
+.input-suffix{
+  position:absolute;right:12px;bottom:12px;
+  color:var(--muted);font-size:.8rem;font-weight:600;
+  pointer-events:none;
+}
+
+/* ── Toast ── */
+.toast{
+  position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:9999;
+  padding:12px 24px;border-radius:12px;font-size:.85rem;font-weight:600;
+  background:var(--card);border:1px solid var(--border);
+  box-shadow:0 8px 30px rgba(0,0,0,.5);animation:toastIn .3s ease;
+}
+@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(-10px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
+
+/* ── 响应式 ── */
+@media(max-width:480px){
+  .container{padding:16px 10px 30px;}
+  .card{padding:16px;}
+}
+a.back{color:var(--muted);text-decoration:none;font-size:.78rem;display:inline-flex;align-items:center;gap:4px;margin-bottom:12px;}
+a.back:hover{color:var(--accent2);}
+</style>
+</head>
+<body>
+<div class="stars"></div>
+
+<div class="container">
+
+  <!-- ── 顶栏 ── -->
+  <div class="nav">
+    <div class="nav-left">
+      <img src="koala.jpg" alt="KOALA" class="logo-avatar"/>
+      <div class="logo-text">燃烧考拉 <em>| 管理员面板</em></div>
+    </div>
+    <div class="nav-right">
+      <span class="badge badge-net" id="networkBadge" style="display:none;"></span>
+      <span class="badge badge-not" id="ownerBadge" style="display:none;"></span>
+      <span class="badge" id="walletBadge" style="display:none;background:var(--card2);color:var(--muted);"></span>
+      <button class="btn btn-outline" id="connectBtn" onclick="connectWallet()">🔌 连接钱包</button>
+    </div>
+  </div>
+
+  <a class="back" href="index.html">← 返回燃烧页面</a>
+
+  <!-- ── 合约总览 ── -->
+  <div class="card glow" id="overviewCard" style="display:none;">
+    <div class="card-title"><span class="icon">📊</span>合约资产总览</div>
+    <div class="info-row">
+      <span class="key">🔥 合约 BNB 余额</span>
+      <span class="val val-bnb" id="cBNB">—</span>
+    </div>
+    <div class="info-row">
+      <span class="key">🐨 合约 KOALA 余额</span>
+      <span class="val val-token" id="cToken">—</span>
+    </div>
+    <div class="info-row">
+      <span class="key">📥 用户总存入</span>
+      <span class="val" id="cTotalDep">—</span>
+    </div>
+    <div class="info-row">
+      <span class="key">⛽ Gas 储备</span>
+      <span class="val" id="cGas">—</span>
+    </div>
+    <div class="info-row">
+      <span class="key">💰 累计已分配 BNB</span>
+      <span class="val val-bnb" id="cDist">—</span>
+    </div>
+  </div>
+
+  <!-- ── 紧急提款 ── -->
+  <div class="card" id="withdrawCard" style="display:none;">
+    <div class="card-title"><span class="icon">⚡</span>紧急提款（仅 Owner）</div>
+
+    <button class="btn btn-danger" id="wdBNBBtn" onclick="withdrawBNB()" style="width:100%;margin-bottom:12px;">
+      🔥 提取全部 BNB
+    </button>
+
+    <!-- KOALA 指定钱包+数量提款 -->
+    <div class="input-wrap" style="margin-bottom:10px;">
+      <label>🐨 接收钱包地址</label>
+      <input id="koalaToAddr" type="text" placeholder="0x..." style="font-family:monospace;font-size:.78rem;"/>
+    </div>
+    <div class="input-wrap" style="margin-bottom:10px;">
+      <label>提取数量</label>
+      <div style="display:flex;align-items:center;">
+        <input id="koalaAmt" type="number" min="0" placeholder="数量" oninput="updateKoalaPreview()" style="flex:1;"/>
+        <button class="btn btn-sm" onclick="setKoalaMax()" style="margin-left:8px;padding:8px 12px;font-size:.72rem;white-space:nowrap;">MAX</button>
+      </div>
+    </div>
+    <div style="font-size:.73rem;color:var(--muted);margin-bottom:10px;" id="koalaPreview" hidden></div>
+    <button class="btn btn-danger" id="wdTokenBtn" onclick="withdrawToken()" style="width:100%;margin-bottom:12px;">
+      🐨 提取 KOALA
+    </button>
+
+    <div class="divider" style="height:1px;background:var(--border);margin:16px 0;"></div>
+    <div style="font-size:.78rem;color:var(--muted);margin-bottom:10px;font-weight:600;">提取其他代币（误转入的）</div>
+
+    <div class="input-wrap" style="margin-bottom:10px;">
+      <label>代币合约地址</label>
+      <input id="anyTokenAddr" type="text" placeholder="0x..."/>
+    </div>
+    <div class="input-wrap" style="margin-bottom:12px;">
+      <label>提取数量</label>
+      <input id="anyTokenAmt" type="number" min="0" placeholder="0"/>
+    </div>
+
+    <button class="btn btn-danger" id="wdAnyBtn" onclick="withdrawAnyToken()" style="width:100%;">
+      📤 提取指定代币
+    </button>
+  </div>
+
+  <!-- ── 合约信息 ── -->
+  <div class="card" id="infoCard" style="display:none;">
+    <div class="card-title"><span class="icon">📋</span>合约信息</div>
+    <div class="info-row">
+      <span class="key">分红合约</span>
+      <span class="val" style="font-size:.75rem;word-break:break-all;" id="divAddr">—</span>
+    </div>
+    <div class="info-row">
+      <span class="key">代币合约</span>
+      <span class="val" style="font-size:.75rem;word-break:break-all;" id="tokAddr">—</span>
+    </div>
+    <div class="info-row">
+      <span class="key">Owner 地址</span>
+      <span class="val" style="font-size:.75rem;word-break:break-all;" id="ownerAddr">—</span>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.0/dist/ethers.umd.min.js"></script>
+<script>
+/* ── 合约地址（硬编码） ── */
+const DIVIDEND_CONTRACT = "0xF5E61b3AF6Eea340D6C250ebE13aA8ff9429E80D";
+const TOKEN_CONTRACT    = "0x83cfd3b7c1423a452a90e0430e65738a213b5555";
+
+/* ── ABI ── */
+const DIVIDEND_ABI = [
+  "function owner() view returns (address)",
+  "function totalDeposited() view returns (uint256)",
+  "function totalDividendsDistributed() view returns (uint256)",
+  "function gasReserve() view returns (uint256)",
+  "function contractBNBBalance() view returns (uint256)",
+  "function emergencyWithdrawBNB()",
+  "function emergencyWithdrawTokenTo(address,uint256)",
+  "function emergencyWithdrawAnyToken(address,uint256)",
+];
+const ERC20_ABI = [
+  "function balanceOf(address) view returns (uint256)",
+  "function decimals() view returns (uint8)",
+];
+
+/* ── 全局 ── */
+let provider, signer, userAddr, divContract, tokenContract, decimals = 18;
+let isOwner = false;
+
+/* ── 连接钱包 ── */
+async function connectWallet() {
+  if (!window.ethereum) { showToast("请安装钱包（MetaMask / TP / OKX）", "error"); return; }
+  try {
+    provider = new ethers.BrowserProvider(window.ethereum);
+    await provider.send("eth_requestAccounts", []);
+    signer   = await provider.getSigner();
+    userAddr = await signer.getAddress();
+
+    const net = await provider.getNetwork();
+    const chainId = Number(net.chainId);
+    const netBadge = document.getElementById("networkBadge");
+    netBadge.style.display = "inline";
+    if (chainId === 56)      netBadge.textContent = "🟢 BSC";
+    else if (chainId === 97) netBadge.textContent = "🟡 Testnet";
+    else                     netBadge.textContent = `Chain ${chainId}`;
+
+    document.getElementById("walletBadge").textContent = userAddr.slice(0,6)+"…"+userAddr.slice(-4);
+    document.getElementById("walletBadge").style.display = "inline";
+    document.getElementById("connectBtn").style.display = "none";
+
+    divContract   = new ethers.Contract(DIVIDEND_CONTRACT, DIVIDEND_ABI, signer);
+    tokenContract = new ethers.Contract(TOKEN_CONTRACT,    ERC20_ABI,    signer);
+
+    // Owner 检查
+    const ownerAddr = await divContract.owner();
+    isOwner = ownerAddr.toLowerCase() === userAddr.toLowerCase();
+    const badge = document.getElementById("ownerBadge");
+    badge.style.display = "inline";
+    badge.textContent = isOwner ? "👑 Owner" : "🔒 非 Owner";
+    badge.className = isOwner ? "badge badge-owner" : "badge badge-not";
+
+    // 显示卡片
+    ["overviewCard","withdrawCard","infoCard"].forEach(id =>
+      document.getElementById(id).style.display = "block");
+
+    // 禁用按钮（非 owner）
+    if (!isOwner) {
+      ["wdBNBBtn","wdTokenBtn","wdAnyBtn"].forEach(id =>
+        document.getElementById(id).disabled = true);
+    }
+
+    // 合约信息
+    document.getElementById("divAddr").textContent   = DIVIDEND_CONTRACT;
+    document.getElementById("tokAddr").textContent   = TOKEN_CONTRACT;
+    document.getElementById("ownerAddr").textContent = ownerAddr;
+
+    await refresh();
+    showToast(isOwner ? "👑 Owner 已连接" : "🔒 已连接（只读）", "success");
+  } catch(e) {
+    showToast("连接失败: " + (e.reason || e.message || e), "error");
+  }
+}
+
+/* ── 刷新 ── */
+async function refresh() {
+  if (!divContract || !tokenContract) return;
+  try {
+    const [cBNB, totalDep, totalDist, gasRes, tokenBal] = await Promise.all([
+      divContract.contractBNBBalance(),
+      divContract.totalDeposited(),
+      divContract.totalDividendsDistributed(),
+      divContract.gasReserve(),
+      tokenContract.balanceOf(DIVIDEND_CONTRACT),
+    ]);
+    document.getElementById("cBNB").textContent     = (+ethers.formatEther(cBNB)).toFixed(6) + " BNB";
+    document.getElementById("cTotalDep").textContent = fmtToken(totalDep) + " KOALA";
+    document.getElementById("cDist").textContent     = (+ethers.formatEther(totalDist)).toFixed(6) + " BNB";
+    document.getElementById("cGas").textContent      = (+ethers.formatEther(gasRes)).toFixed(6) + " BNB";
+    document.getElementById("cToken").textContent    = fmtToken(tokenBal) + " KOALA";
+  } catch(e) {
+    console.warn("Refresh failed:", e.message || e);
+  }
+}
+
+/* ── 提款 ── */
+async function withdrawBNB() {
+  if (!isOwner) { showToast("仅 Owner 可操作", "error"); return; }
+  const btn = document.getElementById("wdBNBBtn");
+  try {
+    btn.innerHTML = '<span class="sp"></span>提取中…'; btn.disabled = true;
+    const tx = await divContract.emergencyWithdrawBNB();
+    showToast("交易已提交…", "info");
+    await tx.wait();
+    showToast("✅ BNB 已全部提取到 Owner 钱包", "success");
+    await refresh();
+  } catch(e) {
+    showToast("失败: " + (e.reason || e.message || e), "error");
+  } finally { btn.textContent = "🔥 提取全部 BNB"; btn.disabled = !isOwner; }
+}
+
+async function withdrawToken() {
+  if (!isOwner) { showToast("仅 Owner 可操作", "error"); return; }
+  const toAddr  = document.getElementById("koalaToAddr").value.trim();
+  const amtStr  = document.getElementById("koalaAmt").value.trim();
+  const btn = document.getElementById("wdTokenBtn");
+
+  if (!ethers.isAddress(toAddr)) { showToast("请输入有效的接收钱包地址", "error"); return; }
+  if (!amtStr || isNaN(amtStr) || Number(amtStr) <= 0) { showToast("请输入提取数量", "error"); return; }
+
+  try {
+    const amount = ethers.parseUnits(amtStr, decimals);
+    const balWei = await tokenContract.balanceOf(DIVIDEND_CONTRACT);
+    if (amount > balWei) { showToast("提取数量超过合约余额", "error"); return; }
+
+    btn.innerHTML = '<span class="sp"></span>提取中…'; btn.disabled = true;
+    const tx = await divContract.emergencyWithdrawTokenTo(toAddr, amount);
+    showToast("交易已提交…", "info");
+    await tx.wait();
+    showToast("✅ KOALA 提取成功", "success");
+    document.getElementById("koalaAmt").value = "";
+    await refresh();
+  } catch(e) {
+    showToast("失败: " + (e.reason || e.message || e), "error");
+  } finally { btn.textContent = "🐨 提取 KOALA"; btn.disabled = !isOwner; }
+}
+
+/* KOALA 快捷填满 */
+async function setKoalaMax() {
+  try {
+    const bal = await tokenContract.balanceOf(DIVIDEND_CONTRACT);
+    const val = ethers.formatUnits(bal, decimals);
+    document.getElementById("koalaAmt").value = val;
+    updateKoalaPreview();
+  } catch {}
+}
+
+function updateKoalaPreview() {
+  const v = document.getElementById("koalaAmt").value;
+  const p = document.getElementById("koalaPreview");
+  if (!v || isNaN(v) || Number(v) <= 0) { p.hidden = true; return; }
+  p.hidden = false;
+  p.textContent = "提取数量: " + v + " KOALA";
+}
+
+
+async function withdrawAnyToken() {
+  if (!isOwner) { showToast("仅 Owner 可操作", "error"); return; }
+  const addr = document.getElementById("anyTokenAddr").value.trim();
+  const amt  = document.getElementById("anyTokenAmt").value.trim();
+  if (!addr || !amt || Number(amt) <= 0) { showToast("请填写代币地址和数量", "error"); return; }
+
+  const btn = document.getElementById("wdAnyBtn");
+  try {
+    btn.innerHTML = '<span class="sp"></span>提取中…'; btn.disabled = true;
+    // 先获取代币精度
+    const tmpC = new ethers.Contract(addr, ["function decimals() view returns (uint8)"], signer);
+    let dec = 18;
+    try { dec = Number(await tmpC.decimals()); } catch {}
+    const amount = ethers.parseUnits(amt, dec);
+    const tx = await divContract.emergencyWithdrawAnyToken(addr, amount);
+    showToast("交易已提交…", "info");
+    await tx.wait();
+    showToast("✅ 代币已提取", "success");
+    await refresh();
+  } catch(e) {
+    showToast("失败: " + (e.reason || e.message || e), "error");
+  } finally { btn.textContent = "📤 提取指定代币"; btn.disabled = !isOwner; }
+}
+
+/* ── 工具 ── */
+function fmtToken(v) {
+  try { return Number(ethers.formatUnits(v, decimals)).toLocaleString(); }
+  catch { return "0"; }
+}
+
+/* ── Toast ── */
+let toastTimer;
+function showToast(msg, type) {
+  clearTimeout(toastTimer);
+  const old = document.querySelector(".toast");
+  if (old) old.remove();
+  const el = document.createElement("div");
+  el.className = "toast";
+  const colors = {success: "var(--green)", error: "var(--red)", info: "var(--blue)"};
+  el.style.color = colors[type] || "var(--text)";
+  el.style.borderColor = colors[type] ? colors[type]+"44" : "var(--border)";
+  el.textContent = msg;
+  document.body.appendChild(el);
+  toastTimer = setTimeout(() => el.remove(), 3500);
+}
+
+/* ── 自动重连 ── */
+if (window.ethereum?.selectedAddress) connectWallet();
+window.ethereum?.on("accountsChanged", () => location.reload());
+window.ethereum?.on("chainChanged", () => location.reload());
+</script>
+</body>
+</html>
