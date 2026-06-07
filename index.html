@@ -495,7 +495,7 @@
     <div class="divider"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
       <div style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;">
-        <div class="stat-label">直接邀请人数</div>
+        <div class="stat-label">累积邀请人数</div>
         <div class="stat-value sv-green" id="invCount2" style="font-size:1.3rem;">0</div>
       </div>
       <div style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;">
@@ -510,10 +510,6 @@
     <div class="stat-card">
       <div class="stat-label">我的存入量</div>
       <div class="stat-value sv-token" id="myDeposited">0</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">可领取 BNB</div>
-      <div class="stat-value sv-bnb" id="myClaimable">0.000000</div>
     </div>
   </div>
 
@@ -657,7 +653,6 @@ async function refreshData() {
     document.getElementById("contractBNB").textContent = "—";
     document.getElementById("totalDistributed").textContent = "—";
     document.getElementById("myDeposited").textContent = "—";
-    document.getElementById("myClaimable").textContent = "—";
     document.getElementById("claimableAmt").textContent = "— BNB";
     document.getElementById("myInviter").textContent = "—";
     document.getElementById("globalCard").style.opacity = ".5";
@@ -695,7 +690,6 @@ async function refreshData() {
 
     // 我的
     document.getElementById("myDeposited").textContent       = fmt(myDep);
-    document.getElementById("myClaimable").textContent       = fmtB(myClaimable);
     document.getElementById("claimableAmt").textContent      = fmtB(myClaimable) + " BNB";
 
     // 邀请
@@ -721,7 +715,6 @@ async function refreshData() {
     document.getElementById("contractBNB").textContent = "—";
     document.getElementById("totalDistributed").textContent = "—";
     document.getElementById("myDeposited").textContent = "—";
-    document.getElementById("myClaimable").textContent = "—";
     document.getElementById("claimableAmt").textContent = "— BNB";
   }
 }
