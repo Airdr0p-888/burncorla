@@ -368,8 +368,8 @@
       <div style="background:rgba(255,140,26,.06);border:1px solid rgba(255,140,26,.2);border-radius:14px;padding:14px 20px;text-align:left;max-width:420px;">
         <div style="font-size:.8rem;color:var(--muted);margin-bottom:8px;letter-spacing:.5px;">🔥 燃烧分配规则</div>
         <div class="rule-chips" style="margin-bottom:6px;">
-          <span class="chip chip-fire">92% 存入燃烧分红矿池</span>
-          <span class="chip chip-lv1">邀请奖励8%</span>
+          <span class="chip chip-fire">85% 存入燃烧分红矿池</span>
+          <span class="chip chip-lv1">一代10% + 二代5%</span>
         </div>
       </div>
     </div>
@@ -460,10 +460,13 @@
     <div id="burnPreview" style="display:none;background:rgba(255,140,26,.06);border:1px solid rgba(255,140,26,.15);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:.8rem;">
       <div style="color:var(--muted);margin-bottom:6px;">燃烧后分配预览：</div>
       <div class="info-row" style="padding:2px 0;">
-        <span class="key">🔥 进入燃烧分红矿池 (92%)</span><span class="val sv-token" id="previewNet">0</span>
+        <span class="key">🔥 进入燃烧分红矿池 (85%)</span><span class="val sv-token" id="previewNet">0</span>
       </div>
       <div class="info-row" style="padding:2px 0;" id="previewLv1Row">
-        <span class="key" style="color:var(--green);">👤 邀请奖励 (8%)</span><span class="val sv-green" id="previewLv1">0</span>
+        <span class="key" style="color:var(--green);">👤 一代邀请 (10%)</span><span class="val sv-green" id="previewLv1">0</span>
+      </div>
+      <div class="info-row" style="padding:2px 0;" id="previewLv2Row">
+        <span class="key" style="color:var(--green);">👥 二代邀请 (5%)</span><span class="val sv-green" id="previewLv2">0</span>
       </div>
     </div>
 
@@ -503,7 +506,7 @@
         <button class="btn-copy" onclick="copyInvite()">📋 复制</button>
       </div>
       <div style="font-size:.74rem;color:var(--muted);margin-top:8px;line-height:1.6;">
-        好友通过你的链接燃烧，你自动获得 <span style="color:var(--green);font-weight:600;">8% 代币</span> 奖励，实时到账钱包。
+        好友通过你的链接燃烧，你获得 <span style="color:var(--green);font-weight:600;">10% 代币</span>，你的上级获得 <span style="color:var(--green);font-weight:600;">5% 代币</span>，实时到账。
       </div>
     </div>
 
@@ -549,7 +552,7 @@ const DIVIDEND_ABI = [
   "function gasReserve() view returns (uint256)",
   "function totalDividendsDistributed() view returns (uint256)",
   "function tokenDecimals() view returns (uint8)",
-  "function getInviteInfo(address) view returns (address,uint256,uint256)",
+  "function getInviteInfo(address) view returns (address,uint256,uint256,uint256)",
   "function deposit(uint256 amount, address inviter)",
   "function claimDividend()",
 ];
@@ -705,11 +708,11 @@ async function refreshData() {
     document.getElementById("claimableAmt").textContent      = fmtB(myClaimable) + " BNB";
 
     // 邀请
-    const [inv1, invCnt, invEarned] = invInfo;
+    const [inv1, invCnt, invEarned1, invEarned2] = invInfo;
     document.getElementById("myInviteCount").textContent  = invCnt.toString();
     document.getElementById("invCount2").textContent      = invCnt.toString();
-    document.getElementById("myInviteEarned").textContent = fmt(invEarned);
-    document.getElementById("invEarned2").textContent     = fmt(invEarned) + " 燃烧Corla";
+    document.getElementById("myInviteEarned").textContent = fmt(invEarned1 + invEarned2);
+    document.getElementById("invEarned2").textContent     = fmt(invEarned1 + invEarned2) + " 燃烧Corla";
     document.getElementById("myInviter").textContent      =
       inv1 && inv1 !== ethers.ZeroAddress
         ? inv1.slice(0,8)+"…"+inv1.slice(-6)
@@ -794,11 +797,13 @@ function updatePreview() {
 
   if (amount === 0n) { preview.style.display = "none"; return; }
   try {
-    const lv1  = (amount * 800n) / 10000n;
-    const net  = amount - lv1;
+    const lv1  = (amount * 1000n) / 10000n;
+    const lv2  = (amount * 500n) / 10000n;
+    const net  = amount - lv1 - lv2;
     preview.style.display = "block";
     document.getElementById("previewNet").textContent = fmtToken(net) + " Corla";
     document.getElementById("previewLv1").textContent = fmtToken(lv1) + " Corla";
+    document.getElementById("previewLv2").textContent = fmtToken(lv2) + " Corla";
   } catch { preview.style.display = "none"; }
 }
 
