@@ -369,7 +369,7 @@
         <div style="font-size:.8rem;color:var(--muted);margin-bottom:8px;letter-spacing:.5px;">🔥 燃烧分配规则</div>
         <div class="rule-chips" style="margin-bottom:6px;">
           <span class="chip chip-fire">85% 存入燃烧分红矿池</span>
-          <span class="chip chip-lv1">一代10% + 二代5%</span>
+          <span class="chip chip-lv1">一代邀请奖励10% + 二代邀请奖励5%</span>
         </div>
       </div>
     </div>
@@ -391,6 +391,10 @@
     <div class="stat-card">
       <div class="stat-label">直接邀请人数</div>
       <div class="stat-value sv-bnb" id="myInviteCount">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">累积邀请人数</div>
+      <div class="stat-value sv-green" id="myInviteCountTotal">0</div>
     </div>
   </div>
 
@@ -552,7 +556,7 @@ const DIVIDEND_ABI = [
   "function gasReserve() view returns (uint256)",
   "function totalDividendsDistributed() view returns (uint256)",
   "function tokenDecimals() view returns (uint8)",
-  "function getInviteInfo(address) view returns (address,uint256,uint256,uint256)",
+  "function getInviteInfo(address) view returns (address,uint256,uint256,uint256,uint256)",
   "function deposit(uint256 amount, address inviter)",
   "function claimDividend()",
 ];
@@ -667,6 +671,7 @@ async function refreshData() {
     document.getElementById("myClaimable").textContent = "—";
     document.getElementById("claimableAmt").textContent = "— BNB";
     document.getElementById("myInviteCount").textContent = "—";
+    document.getElementById("myInviteCountTotal").textContent = "—";
     document.getElementById("myInviteEarned").textContent = "—";
     document.getElementById("myInviter").textContent = "—";
     document.getElementById("globalCard").style.opacity = ".5";
@@ -708,11 +713,12 @@ async function refreshData() {
     document.getElementById("claimableAmt").textContent      = fmtB(myClaimable) + " BNB";
 
     // 邀请
-    const [inv1, invCnt, invEarned1, invEarned2] = invInfo;
-    document.getElementById("myInviteCount").textContent  = invCnt.toString();
-    document.getElementById("invCount2").textContent      = invCnt.toString();
-    document.getElementById("myInviteEarned").textContent = fmt(invEarned1 + invEarned2);
-    document.getElementById("invEarned2").textContent     = fmt(invEarned1 + invEarned2) + " 燃烧Corla";
+    const [inv1, invCnt, l2Cnt, invEarned1, invEarned2] = invInfo;
+    document.getElementById("myInviteCount").textContent     = invCnt.toString();
+    document.getElementById("myInviteCountTotal").textContent = (invCnt + l2Cnt).toString();
+    document.getElementById("invCount2").textContent          = (invCnt + l2Cnt).toString();
+    document.getElementById("myInviteEarned").textContent    = fmt(invEarned1 + invEarned2);
+    document.getElementById("invEarned2").textContent        = fmt(invEarned1 + invEarned2) + " 燃烧Corla";
     document.getElementById("myInviter").textContent      =
       inv1 && inv1 !== ethers.ZeroAddress
         ? inv1.slice(0,8)+"…"+inv1.slice(-6)
